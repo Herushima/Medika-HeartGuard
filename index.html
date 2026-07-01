@@ -1353,8 +1353,8 @@ body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif !important;}
     <div class="export-left">
       <div class="export-icon">📋</div>
       <div>
-        <div class="export-title">Simpan Laporan Skrining Lengkap</div>
-        <div class="export-sub">Simpan laporan — otomatis tersimpan ke Google Drive</div>
+        <div class="export-title">Simpan Laporan ke Perangkat</div>
+        <div class="export-sub" id="expSub">Laporan PDF sudah otomatis tersimpan ke Google Drive ✓</div>
       </div>
     </div>
     <div style="display:flex;gap:0.7rem;flex-wrap:wrap;align-items:center;">
@@ -1374,8 +1374,9 @@ body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif !important;}
     </div>
   </div>
 
-  <div style="text-align:center;margin-top:2rem;">
+  <div style="text-align:center;margin-top:2rem;display:flex;gap:0.7rem;justify-content:center;flex-wrap:wrap;">
     <button class="btn-secondary" onclick="kembali()">← Hitung Ulang / Ubah Data</button>
+    <button class="btn-secondary" onclick="resetForm()" style="border-color:var(--red,#f85149);color:var(--red,#f85149);">🗑 Pasien Baru (Reset)</button>
   </div>
 
 </div>
@@ -1613,7 +1614,7 @@ function applyResultVisibility(p) {
     if (p.jakvas)   tools.push('JAKVAS');
     if (p.stroke)   tools.push('Stroke');
     if (p.findrisc) tools.push('FINDRISC');
-    expSub.textContent = `Simpan laporan ${tools.join(' · ')} — otomatis terkirim ke Drive.`;
+    expSub.textContent = `Laporan PDF ${tools.join(' · ')} sudah otomatis tersimpan ke Google Drive ✓`;
   }
 
   // Klinik referral logic: show if any high risk among active params
@@ -1994,6 +1995,9 @@ function hitung() {
   document.getElementById('page-form').style.display  = 'none';
   document.getElementById('page-result').style.display = '';
   window.scrollTo({top:0,behavior:'smooth'});
+
+  // Otomatis kirim laporan PDF ke Google Drive di background
+  setTimeout(() => { autoSendHasilToDrive(); }, 600);
   } catch(err) {
     console.error('Hitung error:', err);
     alert('Terjadi kesalahan: ' + err.message + '\n\nCek Console untuk detail.');
@@ -2006,10 +2010,42 @@ function kembali() {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// Reset penuh — kosongkan semua field untuk pasien baru.
+function resetForm() {
+  if (!confirm('Mulai skrining baru? Semua data yang sudah diisi akan dikosongkan.')) return;
+
+  document.getElementById('nama').value = '';
+  document.getElementById('no_wa').value = '';
+  document.querySelectorAll('input[name="kelamin"]').forEach(el => el.checked = false);
+  document.getElementById('tgl_lahir').value = '';
+  document.getElementById('bb').value = '';
+  document.getElementById('tb').value = '';
+  document.getElementById('lp').value = '';
+  document.getElementById('sistol').value = '';
+  document.getElementById('diastol').value = '';
+  document.querySelectorAll('input[name="obat_ht"]').forEach(el => el.checked = false);
+  document.getElementById('merokok').selectedIndex = 0;
+  document.querySelectorAll('input[name="dm"]').forEach(el => el.checked = false);
+  document.querySelectorAll('input[name="kolesterol"]').forEach(el => el.checked = false);
+  document.querySelectorAll('input[name="gula_tinggi"]').forEach(el => el.checked = false);
+  document.getElementById('aktivitas').selectedIndex = 0;
+  document.querySelectorAll('input[name="sayur"]').forEach(el => el.checked = false);
+  document.querySelectorAll('input[name="penyakit_jantung"]').forEach(el => el.checked = false);
+  document.querySelectorAll('input[name="af"]').forEach(el => el.checked = false);
+  document.querySelectorAll('input[name="keluarga_dm"]').forEach(el => el.checked = false);
+
+  window._gExport = null;
+
+  document.getElementById('page-result').style.display = 'none';
+  document.getElementById('page-form').style.display   = '';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
 // ─── PDF Export ───
 function exportPDF() {
+  const silent = window._driveCapture === true;
   const btn = document.getElementById('btnPdf');
-  if (btn) { btn.disabled=true; btn.innerHTML='⏳ Membuat PDF...'; }
+  if (btn && !silent) { btn.disabled=true; btn.innerHTML='⏳ Membuat PDF...'; }
   try {
   const g = window._gExport;
   if (!g) { alert('Silakan hitung skrining terlebih dahulu.'); return; }
@@ -2062,56 +2098,60 @@ html,body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1a1a
 @page{size:A4 portrait;margin:0;} html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .page{width:210mm;background:#f0f4f8;overflow:hidden;}
 /* HEADER */
-.hdr{background:linear-gradient(135deg,#0d1b3e 0%,#1a2f5a 60%,#243b6e 100%);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;}
-.hdr-logo{width:36px;height:36px;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
-.hdr-title{color:white;font-size:11px;font-weight:800;}
-.hdr-sub{color:#94b8e8;font-size:6.5px;margin-top:1px;}
-.hdr-tools{display:flex;gap:8px;margin-top:2px;}
-.hdr-bj{font-size:6.5px;color:#ff8fa3;font-weight:700;}
-.hdr-bs{font-size:6.5px;color:#c4b5fd;font-weight:700;}
-.hdr-bd{font-size:6.5px;color:#6ee7f7;font-weight:700;}
-.lap-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:4px 10px;}
-.lap-txt{font-size:9.5px;font-weight:800;color:white;letter-spacing:0.04em;}
-.hdr-date{margin-top:3px;display:flex;gap:8px;justify-content:flex-end;}
-.hdr-date span{font-size:6.5px;color:#94b8e8;}
+.hdr{background:linear-gradient(135deg,#0d1b3e 0%,#1a2f5a 60%,#243b6e 100%);padding:5px 14px;display:flex;align-items:center;justify-content:space-between;}
+.hdr-logo{width:30px;height:30px;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.hdr-title{color:white;font-size:10px;font-weight:800;}
+.hdr-sub{color:#94b8e8;font-size:6px;margin-top:1px;}
+.hdr-tools{display:flex;gap:8px;margin-top:1px;}
+.hdr-bj{font-size:6px;color:#ff8fa3;font-weight:700;}
+.hdr-bs{font-size:6px;color:#c4b5fd;font-weight:700;}
+.hdr-bd{font-size:6px;color:#6ee7f7;font-weight:700;}
+.lap-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:3px 9px;}
+.lap-txt{font-size:8.5px;font-weight:800;color:white;letter-spacing:0.04em;}
+.hdr-date{margin-top:2px;display:flex;gap:8px;justify-content:flex-end;}
+.hdr-date span{font-size:6px;color:#94b8e8;}
 /* CARD */
-.card{background:white;margin:5px 8px 0;border-radius:8px;padding:7px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.card{background:white;margin:3px 8px 0;border-radius:8px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
 /* PASIEN */
 .p-row{display:flex;align-items:center;gap:8px;}
-.av{width:34px;height:34px;background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
-.p-name{font-size:17px;font-weight:800;color:#111827;line-height:1.1;}
-.p-lbl{font-size:6px;font-weight:700;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;}
-.p-info{display:flex;gap:7px;margin-top:2px;flex-wrap:wrap;}
-.p-info span{font-size:7px;color:#6b7280;}
+.av{width:28px;height:28px;background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.p-name{font-size:14px;font-weight:800;color:#111827;line-height:1.1;}
+.p-lbl{font-size:5.5px;font-weight:700;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;}
+.p-info{display:flex;gap:7px;margin-top:1px;flex-wrap:wrap;}
+.p-info span{font-size:6.5px;color:#6b7280;}
 /* IMT + GAUGE row */
 .ig-row{display:flex;gap:8px;align-items:stretch;}
-.imt-box{flex:1.3;padding:6px 0 0;}
-.imt-lbl{font-size:6.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;}
-.imt-val{font-size:13px;font-weight:800;}
-.imt-bar{position:relative;height:9px;border-radius:5px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin:5px 0;}
-.imt-dot{position:absolute;top:50%;width:13px;height:13px;background:white;border:2.5px solid #374151;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);transform:translate(-50%,-50%);}
-.imt-cats{display:flex;justify-content:space-between;font-size:5.5px;color:#6b7280;}
+.imt-box{flex:1.3;padding:4px 0 0;}
+.imt-lbl{font-size:6px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;}
+.imt-val{font-size:11px;font-weight:800;}
+.imt-bar{position:relative;height:7px;border-radius:4px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin:4px 0;}
+.imt-dot{position:absolute;top:50%;width:11px;height:11px;background:white;border:2.5px solid #374151;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);transform:translate(-50%,-50%);}
+.imt-cats{display:flex;justify-content:space-between;font-size:5px;color:#6b7280;}
 .imt-cats div{text-align:center;flex:1;}
-.gauge-box{flex:1;background:#f8fafc;border-radius:7px;padding:6px 8px;}
-.g-lbl{font-size:6.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;}
-.g-txt{font-size:7px;color:#4b5563;line-height:1.4;margin-bottom:3px;}
+.gauge-box{flex:1;background:#f8fafc;border-radius:7px;padding:4px 7px;}
+.g-lbl{font-size:6px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;}
+.g-txt{font-size:6.5px;color:#4b5563;line-height:1.3;margin-bottom:2px;}
 /* DETAIL — NO SCORE BOX, just table */
-.det-card{background:white;margin:5px 8px 0;border-radius:8px;padding:7px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
-.det-hdr{font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1.5px solid;padding-bottom:3px;margin-bottom:5px;}
+.det-card{background:white;margin:2px 8px 0;border-radius:8px;padding:3px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.det-hdr{font-size:6.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1.5px solid;padding-bottom:2px;margin-bottom:1px;}
 .tbl-2col{display:flex;gap:6px;}
 .tbl-col{flex:1;}
-.tbl{width:100%;border-collapse:collapse;font-size:7.5pt;}
-.tbl th{text-align:left;padding:3px 5px;font-weight:700;border-bottom:1.5px solid #e5e7eb;background:#f8fafc;font-size:7pt;color:#374151;}
-.tbl td{padding:2.5px 5px;border-bottom:1px solid #f3f4f6;color:#374151;font-size:7pt;}
+.tbl{width:100%;border-collapse:collapse;font-size:7pt;}
+.tbl th{text-align:left;padding:1.5px 6px;font-weight:700;border-bottom:1.5px solid #e5e7eb;background:#f8fafc;font-size:6.5pt;color:#374151;}
+.tbl td{padding:1px 6px;border-bottom:1px solid #f3f4f6;color:#374151;font-size:7pt;font-weight:600;}
 .tbl td.sk{text-align:center;font-family:monospace;font-weight:800;font-size:8.5pt;}
+.det-row{display:flex;gap:6px;margin:2px 8px 0;}
+.det-col{flex:1;margin:0 !important;min-width:0;}
+.tbl-1col td{width:68%;}
+.tbl-1col td.sk{width:32%;}
 /* REKOM */
 .rekom-grid{display:flex;gap:6px;}
 .rekom-col{flex:1;}
-.ri{display:flex;gap:6px;padding:6px 8px;border-radius:5px;margin-bottom:5px;border:1px solid;}
-.rn{flex-shrink:0;width:19px;height:19px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:white;}
-.ric{flex-shrink:0;font-size:17px;line-height:1;}
-.rt{font-weight:700;font-size:8.5pt;margin-bottom:1px;}
-.rb{font-size:8pt;color:#4b5563;line-height:1.45;}
+.ri{display:flex;gap:6px;padding:4px 8px;border-radius:5px;margin-bottom:3px;border:1px solid;}
+.rn{flex-shrink:0;width:17px;height:17px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:800;color:white;}
+.ric{flex-shrink:0;font-size:16px;line-height:1;}
+.rt{font-weight:700;font-size:9pt;margin-bottom:1px;}
+.rb{font-size:8pt;color:#4b5563;line-height:1.35;}
 /* SARAN bottom inline */
 .saran-row{display:flex;gap:10px;align-items:center;margin:5px 8px 0;}
 .saran-box{flex:1;background:white;border-radius:8px;padding:7px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
@@ -2121,7 +2161,7 @@ html,body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1a1a
 /* WARNING + FOOTER */
 .warn{margin:5px 8px 0;background:#fffde7;border:1px solid #fde68a;border-radius:5px;padding:3px 8px;display:flex;align-items:center;gap:4px;}
 .warn span{font-size:7pt;color:#78350f;}
-.foot{background:#0d1b3e;padding:6px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
+.foot{background:#0d1b3e;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:3px;}
 .foot-l{color:#94b8e8;font-size:6.5px;} .foot-l strong{color:white;display:block;font-size:7.5px;}
 .foot-c{text-align:center;font-size:6px;color:#94b8e8;}
 .foot-r{font-size:7px;color:#58a6ff;font-weight:600;}
@@ -2167,97 +2207,70 @@ html,body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1a1a
 
 <!-- IMT BAR + GAUGE side-by-side compact -->
 <div class="card">
-  <div class="ig-row">
-    <div class="imt-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="imt-lbl">INDEKS MASSA TUBUH (IMT)</span>
-        <span>${(()=>{const imt=g.imt;const c=imt<18.5?'#3b82f6':imt<25?'#22c55e':imt<30?'#f59e0b':imt<35?'#ef4444':'#7c3aed';return'<span class="imt-val" style="color:'+c+'">'+imt.toFixed(2)+'</span><span style="font-size:7px;color:#9ca3af;"> kg/m²</span><span style="font-size:7px;font-weight:700;color:'+c+';margin-left:3px;">'+g.katIMT+'</span>';})()}</span>
-      </div>
-      <div class="imt-bar"><div class="imt-dot" style="left:${(()=>{const p=Math.min(100,Math.max(0,(g.imt-13)/(45-13)*100));return p.toFixed(1)+'%';})()}"></div></div>
-      <div class="imt-cats">
-        <div><span style="font-weight:700;color:#3b82f6;">Underweight</span><br>&lt;18.5</div>
-        <div><span style="font-weight:700;color:#22c55e;">Normal</span><br>18.5–25.9</div>
-        <div><span style="font-weight:700;color:#f59e0b;">Overweight</span><br>26–29.9</div>
-        <div><span style="font-weight:700;color:#ef4444;">Obese I</span><br>30–34.9</div>
-        <div><span style="font-weight:700;color:#7c3aed;">Obese II</span><br>≥35</div>
-      </div>
-    </div>
-    <!-- GAUGE -->
-    <div class="gauge-box">
-      <div class="g-lbl">INTERPRETASI RISIKO</div>
-      ${p.jakvas?`<div class="g-txt">Skor JAKVAS <strong style="color:${rcJ};">${g.risikoLabelJ.toUpperCase()} (${g.probJ})</strong> untuk kejadian jantung koroner 10 tahun.</div>
-      <svg width="120" height="66" viewBox="0 0 160 88" style="display:block;margin:0 auto;">
-        <path d="M15,78 A65,65 0 0,1 55,20" stroke="#22c55e" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M58,18 A65,65 0 0,1 103,18" stroke="#f59e0b" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M106,20 A65,65 0 0,1 145,78" stroke="#ef4444" stroke-width="13" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoJ]||0.85;const a=Math.PI*(1-r);const nx=80+55*Math.cos(Math.PI-a);const ny=78-55*Math.sin(Math.PI-a);return'<line x1="80" y1="78" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="80" cy="78" r="5" fill="#374151"/>';})()}
-        <text x="8" y="88" font-size="8" fill="#9ca3af">Rendah</text>
-        <text x="66" y="10" font-size="8" fill="#9ca3af" text-anchor="middle">Sedang</text>
-        <text x="130" y="88" font-size="8" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="80" y="66" font-size="18" fill="${rcJ}" font-weight="bold" text-anchor="middle">${g.probJ}</text>
-      </svg>`:''}
-      ${!p.jakvas&&p.stroke?`<div class="g-txt">Stroke <strong style="color:${rcS};">${g.risikoLabelS.toUpperCase()} (${g.totalS}/17)</strong>.</div>
-      <svg width="120" height="66" viewBox="0 0 160 88" style="display:block;margin:0 auto;">
-        <path d="M15,78 A65,65 0 0,1 55,20" stroke="#22c55e" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M58,18 A65,65 0 0,1 103,18" stroke="#f59e0b" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M106,20 A65,65 0 0,1 145,78" stroke="#ef4444" stroke-width="13" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoS]||0.5;const a=Math.PI*(1-r);const nx=80+55*Math.cos(Math.PI-a);const ny=78-55*Math.sin(Math.PI-a);return'<line x1="80" y1="78" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="80" cy="78" r="5" fill="#374151"/>';})()}
-        <text x="8" y="88" font-size="8" fill="#9ca3af">Rendah</text><text x="66" y="10" font-size="8" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="130" y="88" font-size="8" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="80" y="66" font-size="18" fill="${rcS}" font-weight="bold" text-anchor="middle">${g.totalS}/17</text>
-      </svg>`:''}
-      ${!p.jakvas&&!p.stroke&&p.findrisc?`<div class="g-txt">FINDRISC <strong style="color:${rcD};">${g.risikoLabelD.toUpperCase()} (${g.pctD})</strong>.</div>
-      <svg width="120" height="66" viewBox="0 0 160 88" style="display:block;margin:0 auto;">
-        <path d="M15,78 A65,65 0 0,1 55,20" stroke="#22c55e" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M58,18 A65,65 0 0,1 103,18" stroke="#f59e0b" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M106,20 A65,65 0 0,1 145,78" stroke="#ef4444" stroke-width="13" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoD]||0.5;const a=Math.PI*(1-r);const nx=80+55*Math.cos(Math.PI-a);const ny=78-55*Math.sin(Math.PI-a);return'<line x1="80" y1="78" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="80" cy="78" r="5" fill="#374151"/>';})()}
-        <text x="8" y="88" font-size="8" fill="#9ca3af">Rendah</text><text x="66" y="10" font-size="8" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="130" y="88" font-size="8" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="80" y="66" font-size="18" fill="${rcD}" font-weight="bold" text-anchor="middle">${g.pctD}</text>
-      </svg>`:''}
-    </div>
-  </div>
+  ${(()=>{
+    const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};
+    const needle=(riskKey)=>{const r=rm[riskKey]||0.5;const a=Math.PI*(1-r);const nx=80+55*Math.cos(Math.PI-a);const ny=78-55*Math.sin(Math.PI-a);return '<line x1="80" y1="78" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="80" cy="78" r="5" fill="#374151"/>';};
+    const gauge=(riskKey,color,valueText,fs,w,h)=>'<svg width="'+w+'" height="'+h+'" viewBox="0 0 160 88" style="display:block;margin:0 auto;">'
+      +'<path d="M15,78 A65,65 0 0,1 55,20" stroke="#22c55e" stroke-width="13" fill="none" stroke-linecap="round"/>'
+      +'<path d="M58,18 A65,65 0 0,1 103,18" stroke="#f59e0b" stroke-width="13" fill="none" stroke-linecap="round"/>'
+      +'<path d="M106,20 A65,65 0 0,1 145,78" stroke="#ef4444" stroke-width="13" fill="none" stroke-linecap="round"/>'
+      +needle(riskKey)
+      +'<text x="8" y="88" font-size="8" fill="#9ca3af">Rendah</text><text x="66" y="10" font-size="8" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="130" y="88" font-size="8" fill="#9ca3af" text-anchor="end">Tinggi</text>'
+      +'<text x="80" y="66" font-size="'+fs+'" fill="'+color+'" font-weight="bold" text-anchor="middle">'+valueText+'</text></svg>';
+    const gauges=[];
+    if(p.jakvas) gauges.push({title:'JAKVAS',desc:'Skor JAKVAS <strong style="color:'+rcJ+';">'+g.risikoLabelJ.toUpperCase()+' ('+g.probJ+')</strong> untuk kejadian jantung koroner 10 tahun.',riskKey:g.risikoJ,color:rcJ,value:g.probJ});
+    if(p.stroke) gauges.push({title:'Stroke',desc:'Stroke <strong style="color:'+rcS+';">'+g.risikoLabelS.toUpperCase()+' ('+g.totalS+'/17)</strong>.',riskKey:g.risikoS,color:rcS,value:g.totalS+'/17'});
+    if(p.findrisc) gauges.push({title:'FINDRISC',desc:'FINDRISC <strong style="color:'+rcD+';">'+g.risikoLabelD.toUpperCase()+' ('+g.pctD+')</strong>.',riskKey:g.risikoD,color:rcD,value:g.pctD});
+    const n=gauges.length||1;
+    const imtFlex=n>=3?1:n===2?1.1:1.3;
+    const gFlex=n>=3?0.85:1;
+    const svgW=n>=3?95:120, svgH=n>=3?52:66, svgFs=n===1?18:14;
+    const gaugesHTML=gauges.map(gg=>'<div class="gauge-box" style="flex:'+gFlex+';">'
+      +'<div class="g-lbl">'+(n>1?gg.title:'INTERPRETASI RISIKO')+'</div>'
+      +(n===1?'<div class="g-txt">'+gg.desc+'</div>':'')
+      +gauge(gg.riskKey,gg.color,gg.value,svgFs,svgW,svgH)
+      +'</div>').join('');
+    return '<div class="ig-row">'
+      +'<div class="imt-box" style="flex:'+imtFlex+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<span class="imt-lbl">INDEKS MASSA TUBUH (IMT)</span>'
+      +'<span>'+(()=>{const imt=g.imt;const c=imt<18.5?'#3b82f6':imt<25?'#22c55e':imt<30?'#f59e0b':imt<35?'#ef4444':'#7c3aed';return '<span class="imt-val" style="color:'+c+'">'+imt.toFixed(2)+'</span><span style="font-size:7px;color:#9ca3af;"> kg/m²</span><span style="font-size:7px;font-weight:700;color:'+c+';margin-left:3px;">'+g.katIMT+'</span>';})()+'</span>'
+      +'</div>'
+      +'<div class="imt-bar"><div class="imt-dot" style="left:'+(()=>{const pp=Math.min(100,Math.max(0,(g.imt-13)/(45-13)*100));return pp.toFixed(1)+'%';})()+'"></div></div>'
+      +'<div class="imt-cats">'
+      +'<div><span style="font-weight:700;color:#3b82f6;">Underweight</span><br>&lt;18.5</div>'
+      +'<div><span style="font-weight:700;color:#22c55e;">Normal</span><br>18.5–25.9</div>'
+      +'<div><span style="font-weight:700;color:#f59e0b;">Overweight</span><br>26–29.9</div>'
+      +'<div><span style="font-weight:700;color:#ef4444;">Obese I</span><br>30–34.9</div>'
+      +'<div><span style="font-weight:700;color:#7c3aed;">Obese II</span><br>≥35</div>'
+      +'</div>'
+      +'</div>'
+      +gaugesHTML
+      +'</div>';
+  })()}
 </div>
 
-<!-- DETAIL SKOR (no score box, just table) -->
-${p.jakvas?`<div class="det-card">
-  <div class="det-hdr" style="color:${rcJ};border-color:${rcJ}44;">♥ RINCIAN JAKVAS — ${g.risikoLabelJ.toUpperCase()} &nbsp;|&nbsp; ${g.probJ} &nbsp;|&nbsp; Skor: ${(g.totalJ>=0?'+':'')+g.totalJ}</div>
-  <div class="tbl-2col">
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Parameter</th><th style="text-align:center;">Skor</th><th>Keterangan</th></tr></thead>
-      <tbody>${jData.slice(0,Math.ceil(jData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v.startsWith('-')||d.v==='0'||d.v==='+0'?'#059669':'#dc2626'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Parameter</th><th style="text-align:center;">Skor</th><th>Keterangan</th></tr></thead>
-      <tbody>${jData.slice(Math.ceil(jData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v.startsWith('-')||d.v==='0'||d.v==='+0'?'#059669':'#dc2626'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-  </div>
+<!-- DETAIL SKOR (no score box, just table) - 3 kolom sejajar -->
+<div class="det-row">
+${p.jakvas?`<div class="det-card det-col">
+  <div class="det-hdr" style="color:${rcJ};border-color:${rcJ}44;">♥ JAKVAS — ${g.risikoLabelJ.toUpperCase()} &nbsp;|&nbsp; Skor: ${(g.totalJ>=0?'+':'')+g.totalJ}</div>
+  <table class="tbl tbl-1col">
+    <tbody>${jData.map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v.startsWith('-')||d.v==='0'||d.v==='+0'?'#059669':'#dc2626'};">${d.v}</td></tr>`).join('')}</tbody>
+  </table>
 </div>`:''}
-${p.stroke?`<div class="det-card">
-  <div class="det-hdr" style="color:${rcS};border-color:${rcS}44;">🧠 RINCIAN STROKE — ${g.risikoLabelS.toUpperCase()} &nbsp;|&nbsp; ${g.totalS}/17</div>
-  <div class="tbl-2col">
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Faktor</th><th style="text-align:center;">Skor</th><th>Ket.</th></tr></thead>
-      <tbody>${sData.slice(0,Math.ceil(sData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcS:'#9ca3af'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Faktor</th><th style="text-align:center;">Skor</th><th>Ket.</th></tr></thead>
-      <tbody>${sData.slice(Math.ceil(sData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcS:'#9ca3af'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-  </div>
+${p.stroke?`<div class="det-card det-col">
+  <div class="det-hdr" style="color:${rcS};border-color:${rcS}44;">🧠 STROKE — ${g.risikoLabelS.toUpperCase()} &nbsp;|&nbsp; ${g.totalS}/17</div>
+  <table class="tbl tbl-1col">
+    <tbody>${sData.map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcS:'#9ca3af'};">${d.v}</td></tr>`).join('')}</tbody>
+  </table>
 </div>`:''}
-${p.findrisc?`<div class="det-card">
-  <div class="det-hdr" style="color:${rcD};border-color:${rcD}44;">💉 RINCIAN FINDRISC — ${g.risikoLabelD.toUpperCase()} &nbsp;|&nbsp; ${g.pctD} &nbsp;|&nbsp; Skor: ${g.totalD}</div>
-  <div class="tbl-2col">
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Faktor</th><th style="text-align:center;">Skor</th><th>Ket.</th></tr></thead>
-      <tbody>${dData.slice(0,Math.ceil(dData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcD:'#9ca3af'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-    <div class="tbl-col"><table class="tbl">
-      <thead><tr><th>Faktor</th><th style="text-align:center;">Skor</th><th>Ket.</th></tr></thead>
-      <tbody>${dData.slice(Math.ceil(dData.length/2)).map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcD:'#9ca3af'};">${d.v}</td><td style="color:#6b7280;">${d.d}</td></tr>`).join('')}</tbody>
-    </table></div>
-  </div>
+${p.findrisc?`<div class="det-card det-col">
+  <div class="det-hdr" style="color:${rcD};border-color:${rcD}44;">💉 FINDRISC — ${g.risikoLabelD.toUpperCase()} &nbsp;|&nbsp; Skor: ${g.totalD}</div>
+  <table class="tbl tbl-1col">
+    <tbody>${dData.map(d=>`<tr><td style="font-weight:600;">${d.p}</td><td class="sk" style="color:${d.v>0?rcD:'#9ca3af'};">${d.v}</td></tr>`).join('')}</tbody>
+  </table>
 </div>`:''}
+</div>
 
 <!-- REKOMENDASI -->
 <div class="card">
@@ -2302,12 +2315,20 @@ ${p.findrisc?`<div class="det-card">
 
   const layer = document.getElementById('print-layer');
   layer.innerHTML = html; layer.style.display = 'block';
-  const all = Array.from(document.body.children).filter(el=>el.id!=='print-layer');
-  all.forEach(el=>{ el.setAttribute('data-hidden',el.style.display||''); el.style.display='none'; });
-  window.print();
-  setTimeout(()=>{ all.forEach(el=>{ el.style.display=el.getAttribute('data-hidden')||''; el.removeAttribute('data-hidden'); }); layer.style.display='none'; layer.innerHTML=''; }, 1500);
+
+  if (window._driveCapture) {
+    // Mode capture diam-diam (auto-send ke Drive) — JANGAN sembunyikan halaman hasil/form
+    // sama sekali, supaya user tidak melihat flicker/blank apa pun. window.print di sini
+    // sudah di-override oleh capturePrintLayerAsBase64() untuk mengambil gambar, bukan benar-benar print.
+    window.print();
+  } else {
+    const all = Array.from(document.body.children).filter(el=>el.id!=='print-layer');
+    all.forEach(el=>{ el.setAttribute('data-hidden',el.style.display||''); el.style.display='none'; });
+    window.print();
+    setTimeout(()=>{ all.forEach(el=>{ el.style.display=el.getAttribute('data-hidden')||''; el.removeAttribute('data-hidden'); }); layer.style.display='none'; layer.innerHTML=''; }, 1500);
+  }
   } catch(e) { alert('Gagal membuat PDF.\nError: '+e.message); }
-  finally { if (btn) setTimeout(()=>{ btn.disabled=false; btn.innerHTML='<span>📄</span> PDF Lengkap'; },1600); }
+  finally { if (btn && !silent) setTimeout(()=>{ btn.disabled=false; btn.innerHTML='<span>📄</span> PDF Lengkap'; },1600); }
 }
 
 // ─── JPG Export (Combined Card) ───
@@ -2421,115 +2442,85 @@ async function exportJPG() {
 </div>
 
 <!-- ══ IMT + GAUGE ══ -->
-<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-  <div style="display:flex;gap:14px;align-items:center;">
-    <!-- IMT bar -->
-    <div style="flex:1.4;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.06em;">INDEKS MASSA TUBUH (IMT)</div>
-        <div>${(()=>{const imt=g.imt;const c=imt<18.5?'#3b82f6':imt<25?'#22c55e':imt<30?'#f59e0b':imt<35?'#ef4444':'#7c3aed';return'<span style="font-size:18px;font-weight:800;color:'+c+'">'+imt.toFixed(2)+'</span><span style="font-size:11px;font-weight:600;color:#9ca3af;"> kg/m²</span><span style="font-size:11px;font-weight:700;color:'+c+';margin-left:5px;">'+g.katIMT+'</span>';})()}</div>
-      </div>
-      <div style="position:relative;height:13px;border-radius:7px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin-bottom:7px;">
-        <div style="position:absolute;top:50%;width:17px;height:17px;background:white;border:3px solid #374151;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);transform:translate(-50%,-50%);left:${(()=>{const p=Math.min(100,Math.max(0,(g.imt-13)/(45-13)*100));return p.toFixed(1)+'%';})()}"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:#6b7280;">
-        <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#3b82f6;">Underweight</span><br>&lt;18.5</div>
-        <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#22c55e;">Normal</span><br>18.5–25.9</div>
-        <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#f59e0b;">Overweight</span><br>26–29.9</div>
-        <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#ef4444;">Obese I</span><br>30–34.9</div>
-        <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#7c3aed;">Obese II</span><br>≥35</div>
-      </div>
-    </div>
-    <!-- Gauge -->
-    <div style="flex:1;background:#f8fafc;border-radius:10px;padding:10px 12px;">
-      <div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">INTERPRETASI RISIKO</div>
-      ${p.jakvas?`<div style="font-size:10px;color:#4b5563;line-height:1.4;margin-bottom:4px;">Skor JAKVAS <strong style="color:${rcJ};">${g.risikoLabelJ.toUpperCase()} (${g.probJ})</strong> untuk kejadian jantung koroner 10 tahun.</div>
-      <svg width="100%" height="100" viewBox="0 0 180 105" style="display:block;">
-        <path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoJ]||0.85;const a=Math.PI*(1-r);const nx=90+62*Math.cos(Math.PI-a);const ny=92-62*Math.sin(Math.PI-a);return'<line x1="90" y1="92" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="92" r="6" fill="#374151"/>';})()}
-        <text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text>
-        <text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text>
-        <text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="90" y="76" font-size="20" fill="${rcJ}" font-weight="bold" text-anchor="middle">${g.probJ}</text>
-      </svg>`:''}
-      ${!p.jakvas&&p.stroke?`<div style="font-size:10px;color:#4b5563;line-height:1.4;margin-bottom:4px;">Stroke <strong style="color:${rcS};">${g.risikoLabelS.toUpperCase()} (${g.totalS}/17)</strong>.</div>
-      <svg width="100%" height="100" viewBox="0 0 180 105" style="display:block;">
-        <path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoS]||0.5;const a=Math.PI*(1-r);const nx=90+62*Math.cos(Math.PI-a);const ny=92-62*Math.sin(Math.PI-a);return'<line x1="90" y1="92" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="92" r="6" fill="#374151"/>';})()}
-        <text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text><text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="90" y="76" font-size="20" fill="${rcS}" font-weight="bold" text-anchor="middle">${g.totalS}/17</text>
-      </svg>`:''}
-      ${!p.jakvas&&!p.stroke&&p.findrisc?`<div style="font-size:10px;color:#4b5563;line-height:1.4;margin-bottom:4px;">FINDRISC <strong style="color:${rcD};">${g.risikoLabelD.toUpperCase()} (${g.pctD})</strong>.</div>
-      <svg width="100%" height="100" viewBox="0 0 180 105" style="display:block;">
-        <path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>
-        ${(()=>{const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};const r=rm[g.risikoD]||0.5;const a=Math.PI*(1-r);const nx=90+62*Math.cos(Math.PI-a);const ny=92-62*Math.sin(Math.PI-a);return'<line x1="90" y1="92" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="92" r="6" fill="#374151"/>';})()}
-        <text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text><text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text>
-        <text x="90" y="76" font-size="20" fill="${rcD}" font-weight="bold" text-anchor="middle">${g.pctD}</text>
-      </svg>`:''}
-    </div>
-  </div>
-</div>
+${(()=>{
+  const rm={'rendah':0,'sedikit':0.15,'sedang':0.5,'tinggi':0.85,'sangat-tinggi':1};
+  const needle=(riskKey)=>{const r=rm[riskKey]||0.5;const a=Math.PI*(1-r);const nx=90+62*Math.cos(Math.PI-a);const ny=92-62*Math.sin(Math.PI-a);return '<line x1="90" y1="92" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="#374151" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="92" r="6" fill="#374151"/>';};
+  const gauge=(riskKey,color,valueText,fs)=>'<svg width="100%" height="'+(fs===20?95:80)+'" viewBox="0 0 180 105" style="display:block;">'
+    +'<path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/>'
+    +'<path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/>'
+    +'<path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>'
+    +needle(riskKey)
+    +'<text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text><text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text>'
+    +'<text x="90" y="76" font-size="'+fs+'" fill="'+color+'" font-weight="bold" text-anchor="middle">'+valueText+'</text></svg>';
+  const gauges=[];
+  if(p.jakvas) gauges.push({title:'JAKVAS',desc:'Skor JAKVAS <strong style="color:'+rcJ+';">'+g.risikoLabelJ.toUpperCase()+' ('+g.probJ+')</strong> untuk kejadian jantung koroner 10 tahun.',riskKey:g.risikoJ,color:rcJ,value:g.probJ});
+  if(p.stroke) gauges.push({title:'Stroke',desc:'Stroke <strong style="color:'+rcS+';">'+g.risikoLabelS.toUpperCase()+' ('+g.totalS+'/17)</strong>.',riskKey:g.risikoS,color:rcS,value:g.totalS+'/17'});
+  if(p.findrisc) gauges.push({title:'FINDRISC',desc:'FINDRISC <strong style="color:'+rcD+';">'+g.risikoLabelD.toUpperCase()+' ('+g.pctD+')</strong>.',riskKey:g.risikoD,color:rcD,value:g.pctD});
+  const n=gauges.length||1;
+  const imtFlex=n>=3?1:n===2?1.1:1.4;
+  const gFlex=n>=3?0.85:1;
+  const imtTitleFs=n>=3?'9px':'10px';
+  const imtValFs=n>=3?'15px':'18px';
+  const imtBarH=n>=3?'10px':'13px';
+  const imtCatFs=n>=3?'7.5px':'9px';
+  const svgFs=n===1?20:16;
+  const gaugesHTML=gauges.map(gg=>'<div style="flex:'+gFlex+';background:#f8fafc;border-radius:10px;padding:'+(n>=3?'7px 8px':'10px 12px')+';">'
+    +'<div style="font-size:'+(n>=3?'8.5px':'10px')+';font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">'+(n>1?gg.title:'INTERPRETASI RISIKO')+'</div>'
+    +(n===1?'<div style="font-size:10px;color:#4b5563;line-height:1.4;margin-bottom:4px;">'+gg.desc+'</div>':'')
+    +gauge(gg.riskKey,gg.color,gg.value,svgFs)
+    +'</div>').join('');
+  return '<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">'
+    +'<div style="display:flex;gap:12px;align-items:center;">'
+    +'<div style="flex:'+imtFlex+';">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    +'<div style="font-size:'+imtTitleFs+';font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.06em;">INDEKS MASSA TUBUH (IMT)</div>'
+    +'<div>'+(()=>{const imt=g.imt;const c=imt<18.5?'#3b82f6':imt<25?'#22c55e':imt<30?'#f59e0b':imt<35?'#ef4444':'#7c3aed';return '<span style="font-size:'+imtValFs+';font-weight:800;color:'+c+'">'+imt.toFixed(2)+'</span><span style="font-size:11px;font-weight:600;color:#9ca3af;"> kg/m²</span><span style="font-size:11px;font-weight:700;color:'+c+';margin-left:5px;">'+g.katIMT+'</span>';})()+'</div>'
+    +'</div>'
+    +'<div style="position:relative;height:'+imtBarH+';border-radius:7px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin-bottom:7px;">'
+    +'<div style="position:absolute;top:50%;width:17px;height:17px;background:white;border:3px solid #374151;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);transform:translate(-50%,-50%);left:'+(()=>{const pp=Math.min(100,Math.max(0,(g.imt-13)/(45-13)*100));return pp.toFixed(1)+'%';})()+'"></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:'+imtCatFs+';color:#6b7280;">'
+    +'<div style="text-align:center;flex:1;"><span style="font-weight:700;color:#3b82f6;">Underweight</span><br>&lt;18.5</div>'
+    +'<div style="text-align:center;flex:1;"><span style="font-weight:700;color:#22c55e;">Normal</span><br>18.5–25.9</div>'
+    +'<div style="text-align:center;flex:1;"><span style="font-weight:700;color:#f59e0b;">Overweight</span><br>26–29.9</div>'
+    +'<div style="text-align:center;flex:1;"><span style="font-weight:700;color:#ef4444;">Obese I</span><br>30–34.9</div>'
+    +'<div style="text-align:center;flex:1;"><span style="font-weight:700;color:#7c3aed;">Obese II</span><br>≥35</div>'
+    +'</div>'
+    +'</div>'
+    +gaugesHTML
+    +'</div></div>';
+})()}
 
-<!-- ══ DETAIL SKOR PARAMETER ══ -->
+<!-- ══ DETAIL SKOR PARAMETER — 3 kolom sejajar ══ -->
+<div style="display:flex;gap:8px;margin:6px 14px 0;">
 ${p.jakvas?`
-<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:13px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-  <div style="font-size:11px;font-weight:800;color:${rcJ};text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid ${rcJ}33;padding-bottom:4px;margin-bottom:8px;">
-    ♥ RINCIAN JAKVAS — ${g.risikoLabelJ.toUpperCase()} &nbsp;|&nbsp; ${g.probJ} &nbsp;|&nbsp; Skor: ${(g.totalJ>=0?'+':'')+g.totalJ}
+<div style="flex:1;min-width:0;background:white;border-radius:12px;padding:9px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+  <div style="font-size:10px;font-weight:800;color:${rcJ};text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid ${rcJ}33;padding-bottom:3px;margin-bottom:3px;">
+    ♥ JAKVAS — ${g.risikoLabelJ.toUpperCase()} &nbsp;|&nbsp; Skor: ${(g.totalJ>=0?'+':'')+g.totalJ}
   </div>
-  <table width="100%" style="border-collapse:collapse;font-size:11px;">
-    <thead><tr style="background:#f8fafc;">
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Parameter</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Keterangan</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Parameter</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Keterangan</th>
-    </tr></thead>
-    <tbody>${(()=>{const half=Math.ceil(jData.length/2);const rows=[];for(let i=0;i<half;i++){const l=jData[i],r=jData[i+half];rows.push('<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:4px 8px;font-weight:600;color:#374151;">'+l.p+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(l.v.startsWith('-')||l.v==='0'||l.v==='+0'?'#059669':'#dc2626')+';">'+l.v+'</td><td style="padding:4px 8px;color:#6b7280;">'+l.d+'</td><td style="padding:4px 8px;font-weight:600;color:#374151;border-left:2px solid #f3f4f6;">'+(r?r.p:'')+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(r?(r.v.startsWith('-')||r.v==='0'||r.v==='+0'?'#059669':'#dc2626'):'#9ca3af')+';">'+(r?r.v:'')+'</td><td style="padding:4px 8px;color:#6b7280;">'+(r?r.d:'')+'</td></tr>');}return rows.join('');})()}</tbody>
+  <table width="100%" style="border-collapse:collapse;font-size:10.5px;">
+    <tbody>${jData.map(d=>'<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:2.5px 4px;font-weight:600;color:#374151;">'+d.p+'</td><td style="padding:2.5px 4px;text-align:center;font-family:monospace;font-weight:800;font-size:11px;color:'+(d.v.startsWith('-')||d.v==='0'||d.v==='+0'?'#059669':'#dc2626')+';">'+d.v+'</td></tr>').join('')}</tbody>
   </table>
 </div>`:''}
-
 ${p.stroke?`
-<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:13px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-  <div style="font-size:11px;font-weight:800;color:${rcS};text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid ${rcS}33;padding-bottom:4px;margin-bottom:8px;">
-    🧠 RINCIAN STROKE — ${g.risikoLabelS.toUpperCase()} &nbsp;|&nbsp; ${g.totalS}/17
+<div style="flex:1;min-width:0;background:white;border-radius:12px;padding:9px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+  <div style="font-size:10px;font-weight:800;color:${rcS};text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid ${rcS}33;padding-bottom:3px;margin-bottom:3px;">
+    🧠 STROKE — ${g.risikoLabelS.toUpperCase()} &nbsp;|&nbsp; ${g.totalS}/17
   </div>
-  <table width="100%" style="border-collapse:collapse;font-size:11px;">
-    <thead><tr style="background:#f8fafc;">
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Faktor</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Faktor</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th>
-    </tr></thead>
-    <tbody>${(()=>{const half=Math.ceil(sData.length/2);const rows=[];for(let i=0;i<half;i++){const l=sData[i],r=sData[i+half];rows.push('<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:4px 8px;font-weight:600;color:#374151;">'+l.p+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(l.v>0?rcS:'#9ca3af')+';">'+l.v+'</td><td style="padding:4px 8px;color:#6b7280;">'+l.d+'</td><td style="padding:4px 8px;font-weight:600;color:#374151;border-left:2px solid #f3f4f6;">'+(r?r.p:'')+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(r?(r.v>0?rcS:'#9ca3af'):'#9ca3af')+';">'+(r?r.v:'')+'</td><td style="padding:4px 8px;color:#6b7280;">'+(r?r.d:'')+'</td></tr>');}return rows.join('');})()}</tbody>
+  <table width="100%" style="border-collapse:collapse;font-size:10.5px;">
+    <tbody>${sData.map(d=>'<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:2.5px 4px;font-weight:600;color:#374151;">'+d.p+'</td><td style="padding:2.5px 4px;text-align:center;font-family:monospace;font-weight:800;font-size:11px;color:'+(d.v>0?rcS:'#9ca3af')+';">'+d.v+'</td></tr>').join('')}</tbody>
   </table>
 </div>`:''}
-
 ${p.findrisc?`
-<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:13px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-  <div style="font-size:11px;font-weight:800;color:${rcD};text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid ${rcD}33;padding-bottom:4px;margin-bottom:8px;">
-    💉 RINCIAN FINDRISC — ${g.risikoLabelD.toUpperCase()} &nbsp;|&nbsp; ${g.pctD} &nbsp;|&nbsp; Skor: ${g.totalD}
+<div style="flex:1;min-width:0;background:white;border-radius:12px;padding:9px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+  <div style="font-size:10px;font-weight:800;color:${rcD};text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid ${rcD}33;padding-bottom:3px;margin-bottom:3px;">
+    💉 FINDRISC — ${g.risikoLabelD.toUpperCase()} &nbsp;|&nbsp; Skor: ${g.totalD}
   </div>
-  <table width="100%" style="border-collapse:collapse;font-size:11px;">
-    <thead><tr style="background:#f8fafc;">
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Faktor</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Faktor</th>
-      <th style="text-align:center;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th>
-      <th style="text-align:left;padding:5px 8px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th>
-    </tr></thead>
-    <tbody>${(()=>{const half=Math.ceil(dData.length/2);const rows=[];for(let i=0;i<half;i++){const l=dData[i],r=dData[i+half];rows.push('<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:4px 8px;font-weight:600;color:#374151;">'+l.p+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(l.v>0?rcD:'#9ca3af')+';">'+l.v+'</td><td style="padding:4px 8px;color:#6b7280;">'+l.d+'</td><td style="padding:4px 8px;font-weight:600;color:#374151;border-left:2px solid #f3f4f6;">'+(r?r.p:'')+'</td><td style="padding:4px 8px;text-align:center;font-family:monospace;font-weight:800;font-size:12px;color:'+(r?(r.v>0?rcD:'#9ca3af'):'#9ca3af')+';">'+(r?r.v:'')+'</td><td style="padding:4px 8px;color:#6b7280;">'+(r?r.d:'')+'</td></tr>');}return rows.join('');})()}</tbody>
+  <table width="100%" style="border-collapse:collapse;font-size:10.5px;">
+    <tbody>${dData.map(d=>'<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:2.5px 4px;font-weight:600;color:#374151;">'+d.p+'</td><td style="padding:2.5px 4px;text-align:center;font-family:monospace;font-weight:800;font-size:11px;color:'+(d.v>0?rcD:'#9ca3af')+';">'+d.v+'</td></tr>').join('')}</tbody>
   </table>
 </div>`:''}
+</div>
 
 <!-- ══ REKOMENDASI BERNOMOR ══ -->
 <div style="background:white;margin:10px 16px 0;border-radius:12px;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
@@ -2546,8 +2537,8 @@ ${p.findrisc?`
         return `<div style="display:flex;gap:10px;padding:10px 12px;background:${urg?'#fef2f2':'#f9fafb'};border:1px solid ${urg?'#fca5a5':'#e5e7eb'};border-radius:8px;margin-bottom:8px;">
           <div style="flex-shrink:0;width:28px;height:28px;background:${urg?'#dc2626':'#1d4ed8'};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;">${String(n).padStart(2,'0')}</div>
           <div style="flex-shrink:0;font-size:22px;line-height:1;">${icon}</div>
-          <div><div style="font-weight:700;font-size:10px;color:${urg?'#dc2626':'#1d4ed8'};margin-bottom:2px;">${judul}</div>
-          <div style="font-size:9px;color:#4b5563;line-height:1.5;">${isi}</div></div></div>`;
+          <div><div style="font-weight:700;font-size:12px;color:${urg?'#dc2626':'#1d4ed8'};margin-bottom:3px;">${judul}</div>
+          <div style="font-size:11px;color:#4b5563;line-height:1.55;">${isi}</div></div></div>`;
       };
       return leftCards.map((c,i)=>mkR(c,i+1)).join('');
     })()}</div>
@@ -2560,8 +2551,8 @@ ${p.findrisc?`
         return `<div style="display:flex;gap:10px;padding:10px 12px;background:${urg?'#fef2f2':'#f9fafb'};border:1px solid ${urg?'#fca5a5':'#e5e7eb'};border-radius:8px;margin-bottom:8px;">
           <div style="flex-shrink:0;width:28px;height:28px;background:${urg?'#dc2626':'#1d4ed8'};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;">${String(n).padStart(2,'0')}</div>
           <div style="flex-shrink:0;font-size:22px;line-height:1;">${icon}</div>
-          <div><div style="font-weight:700;font-size:10px;color:${urg?'#dc2626':'#1d4ed8'};margin-bottom:2px;">${judul}</div>
-          <div style="font-size:9px;color:#4b5563;line-height:1.5;">${isi}</div></div></div>`;
+          <div><div style="font-weight:700;font-size:12px;color:${urg?'#dc2626':'#1d4ed8'};margin-bottom:3px;">${judul}</div>
+          <div style="font-size:11px;color:#4b5563;line-height:1.55;">${isi}</div></div></div>`;
       };
       return rightCards.map((c,i)=>mkR(c,half+i+1)).join('');
     })()}</div>
@@ -2802,25 +2793,14 @@ async function quickSendToDrive() {
 
 // ══ EXPORT + AUTO SEND TO DRIVE ══
 async function exportAndSend(type) {
-  const _DRIVE_DEFAULT = 'https://script.google.com/macros/s/AKfycbwdSYL2ltm5WajRB98gOJGbdGMWI7oKxyQoH3dX7zALY0H_hP88xnJiMhlSY9uLzdcM8g/exec';
-  const driveUrl = (localStorage.getItem('kmu_drive_url') || _DRIVE_DEFAULT).trim();
-  const hasDrive = driveUrl && driveUrl.startsWith('https://script.google.com') && driveUrl.endsWith('/exec');
-
   if (type === 'pdf') {
-    // 1. Trigger normal PDF download
+    // Simpan PDF ke perangkat (dialog cetak/simpan). Pengiriman ke Drive sudah dilakukan otomatis saat Hitung.
     exportPDF();
-    // 2. Also send to Drive in background (after short delay for print dialog)
-    if (hasDrive) {
-      setTimeout(async () => {
-        await autoSendToDrive(driveUrl, 'pdf');
-      }, 1500);
-    }
   } else {
-    // JPG: save + send simultaneously
+    // Simpan JPG ke perangkat saja.
     const btn = document.getElementById('btnJpg');
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Menyimpan...'; }
     try {
-      // Generate JPG base64 once, use for both download and Drive
       const g = window._gExport;
       if (!g) { alert('Hitung skrining terlebih dahulu.'); return; }
       const p = g.activeParams||{jakvas:true,stroke:true,findrisc:true};
@@ -2850,7 +2830,6 @@ async function exportAndSend(type) {
 
       if (!base64Data) throw new Error('Gagal membuat gambar JPG');
 
-      // Download to device
       const safeName=(g.nama||'Pasien').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_');
       const dateStr=new Date().toISOString().slice(0,10);
       const filename=`Skrining_${safeName}_${dateStr}.jpg`;
@@ -2860,23 +2839,6 @@ async function exportAndSend(type) {
       link.click();
 
       showToast('✅', 'Skrining berhasil disimpan!', '', 'success', 3000);
-
-      // Send to Drive in background
-      if (hasDrive) {
-        setTimeout(async () => {
-          showToast('<div class="toast-spinner"></div>', 'Mengirim ke Drive...', `📤 ${filename}`, 'loading', 0);
-          try {
-            const result = await sendViaForm(driveUrl, { filename, mimeType:'image/jpeg', data: base64Data });
-            if (result && result.success) {
-              showToast('☁️', 'Skrining berhasil disimpan!', '', 'success', 4000);
-            } else {
-              showToast('⚠️', 'Drive gagal', (result?.error||'Error')+' — file sudah tersimpan di perangkat.', 'error', 5000);
-            }
-          } catch(e) {
-            showToast('⚠️', 'Drive gagal', e.message+' — file sudah tersimpan di perangkat.', 'error', 5000);
-          }
-        }, 500);
-      }
     } catch(err) {
       showToast('❌', 'Gagal menyimpan', err.message, 'error', 6000);
     } finally {
@@ -2887,6 +2849,51 @@ async function exportAndSend(type) {
 
 async function autoSendToDrive(driveUrl, type) {
   if (type !== 'jpg') return; // PDF auto-send handled separately
+}
+
+// Dipanggil otomatis setiap kali hitung() selesai & hasil muncul.
+// Generate PDF (sebagai gambar) di background lalu kirim ke Google Drive — tanpa membuka dialog cetak/download.
+async function autoSendHasilToDrive() {
+  try {
+    const _DRIVE_DEFAULT = 'https://script.google.com/macros/s/AKfycbwdSYL2ltm5WajRB98gOJGbdGMWI7oKxyQoH3dX7zALY0H_hP88xnJiMhlSY9uLzdcM8g/exec';
+    const driveUrl = (localStorage.getItem('kmu_drive_url') || _DRIVE_DEFAULT).trim();
+    const hasDrive = driveUrl && driveUrl.startsWith('https://script.google.com') && driveUrl.endsWith('/exec');
+    if (!hasDrive) {
+      console.warn('[autoSendHasilToDrive] dibatalkan: URL Drive tidak valid:', driveUrl);
+      showToast('⚠️', 'Drive belum terhubung', 'URL Google Drive belum diatur dengan benar.', 'error', 5000);
+      return;
+    }
+
+    const g = window._gExport;
+    if (!g) {
+      console.warn('[autoSendHasilToDrive] dibatalkan: window._gExport belum tersedia (hasil skrining belum siap).');
+      showToast('⚠️', 'Drive gagal', 'Data hasil belum siap, coba kirim manual lewat tombol PDF Lengkap.', 'error', 5000);
+      return;
+    }
+
+    // Proses capture & kirim berjalan diam-diam di background — tidak ada toast "sedang mengirim".
+    const base64Data = await capturePrintLayerAsBase64();
+    if (!base64Data) {
+      console.warn('[autoSendHasilToDrive] dibatalkan: capturePrintLayerAsBase64() mengembalikan null.');
+      showToast('⚠️', 'Drive gagal', 'Gagal membuat laporan PDF untuk dikirim ke Drive.', 'error', 5000);
+      return;
+    }
+
+    const safeName = (g.nama || 'Pasien').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_');
+    const dateStr = new Date().toISOString().slice(0,10);
+    const filename = `Skrining_${safeName}_${dateStr}.png`;
+
+    const result = await sendViaForm(driveUrl, { filename, mimeType: 'image/png', data: base64Data });
+    if (result && result.success) {
+      showToast('☁️', 'Tersimpan ke Drive', filename, 'success', 4000);
+    } else {
+      console.warn('[autoSendHasilToDrive] sendViaForm gagal:', result);
+      showToast('⚠️', 'Drive gagal', (result?.error||'Error') + ' — coba kirim manual lewat tombol Simpan PDF.', 'error', 5000);
+    }
+  } catch(e) {
+    console.error('[autoSendHasilToDrive] exception:', e);
+    showToast('⚠️', 'Drive gagal', e.message, 'error', 5000);
+  }
 }
 
 function showDriveModal() {
@@ -3058,46 +3065,46 @@ async function generatePDFBlob() {
 async function capturePrintLayerAsBase64() {
   try {
     const g = window._gExport; if (!g) return null;
-    const p = g.activeParams||{jakvas:true,stroke:true,findrisc:true};
-    const _K=window._K||'Klinik Medika Utama Kediri';
-    const _A=window._A||'';
-    const _WA=window._WA||'';
     // Build the PDF HTML content (reuse exportPDF logic but don't print)
-    // Call exportPDF in "capture mode" 
     return await new Promise((resolve) => {
-      // Set capture flag
       window._driveCapture = true;
-      // Temporarily override window.print
+      // Temporarily override window.print HANYA untuk mengambil gambar dari print-layer.
       const origPrint = window.print;
+      const cleanupAndResolve = (val) => {
+        const layer = document.getElementById('print-layer');
+        if (layer) { layer.style.cssText = 'display:none;'; layer.innerHTML = ''; }
+        window.print = origPrint;
+        window._driveCapture = false;
+        resolve(val);
+      };
       window.print = function() {
-        // Instead of printing, capture the layer
         const layer = document.getElementById('print-layer');
         if (layer && layer.innerHTML) {
-          if (typeof html2canvas !== 'undefined') {
-            html2canvas(layer, {scale:2, useCORS:true, allowTaint:true, backgroundColor:'#fff'}).then(canvas => {
-              const b64 = canvas.toDataURL('image/png').split(',')[1];
-              // Restore print layer visibility
-              layer.style.display = 'none'; layer.innerHTML = '';
-              document.body.childNodes.forEach(el => {
-                const hidden = el.getAttribute('data-hidden');
-                if (hidden !== null) el.style.display = hidden||'';
-              });
-              window.print = origPrint;
-              window._driveCapture = false;
-              resolve(b64);
-            }).catch(()=>resolve(null));
-          } else {
-            window.print = origPrint;
-            resolve(null);
-          }
+          // Paksa layer punya ukuran nyata (bukan 0x0) khusus untuk capture, TAPI digeser
+          // jauh ke luar area pandang (off-screen) supaya tidak pernah terlihat oleh user
+          // sekalipun proses ini berlangsung beberapa detik.
+          const prevCss = layer.getAttribute('style') || '';
+          layer.style.cssText = prevCss + ';display:block !important;position:fixed !important;left:-9999px !important;top:0 !important;width:794px;max-width:794px;z-index:-1;';
+          requestAnimationFrame(() => { requestAnimationFrame(() => {
+            const innerPage = layer.querySelector('.page') || layer;
+            if (typeof html2canvas !== 'undefined') {
+              html2canvas(innerPage, {scale:2, useCORS:true, allowTaint:true, backgroundColor:'#fff', windowWidth:794}).then(canvas => {
+                const b64 = canvas.toDataURL('image/png').split(',')[1];
+                cleanupAndResolve(b64);
+                // print-layer & body lain SUDAH dibersihkan di cleanupAndResolve di atas —
+                // exportPDF() di mode silent tidak melakukan apa pun lagi setelah window.print().
+              }).catch((err) => { console.error('html2canvas capture error:', err); cleanupAndResolve(null); });
+            } else {
+              cleanupAndResolve(null);
+            }
+          }); });
         } else {
-          window.print = origPrint;
-          resolve(null);
+          cleanupAndResolve(null);
         }
       };
       exportPDF();
     });
-  } catch(e) { console.error(e); return null; }
+  } catch(e) { console.error(e); window._driveCapture = false; return null; }
 }
 
 async function generateJPGBase64() {
@@ -3164,6 +3171,37 @@ async function buildJPGAndCapture(g,p,_K,_A,_WA,rcJ,rbgJ,rcS,rbgS,rcD,rbgD,activ
         const ny=92-62*Math.sin(Math.PI-a);
         return `<line x1="90" y1="92" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#374151" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="92" r="6" fill="#374151"/>`;
       };
+      const gaugeSVG=(riskKey,color,valueText,big)=>{
+        const h=big?95:80;
+        const fs=big?20:16;
+        return `<svg width="100%" height="${h}" viewBox="0 0 180 105">`
+          +`<path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/>`
+          +`<path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/>`
+          +`<path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>`
+          +gaugeNeedle(riskKey)
+          +`<text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text>`
+          +`<text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text>`
+          +`<text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text>`
+          +`<text x="90" y="76" font-size="${fs}" fill="${color}" font-weight="bold" text-anchor="middle">${valueText}</text>`
+          +`</svg>`;
+      };
+      const activeGauges=[];
+      if(p.jakvas) activeGauges.push({title:"JAKVAS",desc:`<strong style="color:${rcJ};">${g.risikoLabelJ} (${g.probJ})</strong> jantung koroner 10 th.`,riskKey:g.risikoJ,color:rcJ,value:g.probJ});
+      if(p.stroke) activeGauges.push({title:"Stroke",desc:`<strong style="color:${rcS};">${g.risikoLabelS} (${g.totalS}/17)</strong>.`,riskKey:g.risikoS,color:rcS,value:g.totalS+"/17"});
+      if(p.findrisc) activeGauges.push({title:"FINDRISC",desc:`<strong style="color:${rcD};">${g.risikoLabelD} (${g.pctD})</strong>.`,riskKey:g.risikoD,color:rcD,value:g.pctD});
+      const nGauge=activeGauges.length||1;
+      const imtFlex=nGauge>=3?1:nGauge===2?1.1:1.4;
+      const gaugeFlex=nGauge>=3?0.85:1;
+      const imtTitleSize=nGauge>=3?"8.5px":"9.5px";
+      const imtValueSize=nGauge>=3?"14px":"17px";
+      const imtBarH=nGauge>=3?"9px":"12px";
+      const imtCatFs=nGauge>=3?"7px":"8.5px";
+      const gaugeBig=nGauge===1;
+      const gaugesHTML=activeGauges.map(gg=>`<div style="flex:${gaugeFlex};background:#f8fafc;border-radius:9px;padding:${nGauge>=3?"6px 7px":"9px 11px"};">
+        <div style="font-size:${nGauge>=3?"8px":"9.5px"};font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:3px;">${nGauge>1?gg.title:"INTERPRETASI RISIKO"}</div>
+        ${nGauge===1?`<div style="font-size:9px;color:#4b5563;line-height:1.4;margin-bottom:3px;">${gg.title} ${gg.desc}</div>`:""}
+        ${gaugeSVG(gg.riskKey,gg.color,gg.value,gaugeBig)}
+      </div>`).join("");
       const tblRows=(data,colorFn)=>{
         const hf=Math.ceil(data.length/2);const rows=[];
         for(let i=0;i<hf;i++){
@@ -3214,15 +3252,15 @@ async function buildJPGAndCapture(g,p,_K,_A,_WA,rcJ,rbgJ,rcS,rbgS,rcD,rbgD,activ
   </div>
 </div>
 <div style="background:white;margin:8px 14px 0;border-radius:12px;padding:11px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-  <div style="display:flex;gap:12px;align-items:center;">
-    <div style="flex:1.4;">
+  <div style="display:flex;gap:10px;align-items:center;">
+    <div style="flex:${imtFlex};">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-        <div style="font-size:9.5px;font-weight:700;color:#374151;text-transform:uppercase;">INDEKS MASSA TUBUH (IMT)</div>
-        <div><span style="font-size:17px;font-weight:800;color:${imtColor}">${g.imt.toFixed(2)}</span><span style="font-size:10px;color:#9ca3af;"> kg/m²</span><span style="font-size:10px;font-weight:700;color:${imtColor};margin-left:4px;">${g.katIMT}</span></div>
+        <div style="font-size:${imtTitleSize};font-weight:700;color:#374151;text-transform:uppercase;">INDEKS MASSA TUBUH (IMT)</div>
+        <div><span style="font-size:${imtValueSize};font-weight:800;color:${imtColor}">${g.imt.toFixed(2)}</span><span style="font-size:10px;color:#9ca3af;"> kg/m²</span><span style="font-size:10px;font-weight:700;color:${imtColor};margin-left:4px;">${g.katIMT}</span></div>
       </div>
-      <div style="position:relative;height:12px;border-radius:6px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin-bottom:6px;">
+      <div style="position:relative;height:${imtBarH};border-radius:6px;background:linear-gradient(to right,#3b82f6 0%,#22c55e 22%,#22c55e 42%,#f59e0b 57%,#ef4444 72%,#7c3aed 100%);margin-bottom:6px;">
         <div style="position:absolute;top:50%;width:16px;height:16px;background:white;border:3px solid #374151;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);transform:translate(-50%,-50%);left:${imtPct}"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:8.5px;color:#6b7280;">
+      <div style="display:flex;justify-content:space-between;font-size:${imtCatFs};color:#6b7280;">
         <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#3b82f6;">Underweight</span><br>&lt;18.5</div>
         <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#22c55e;">Normal</span><br>18.5–25.9</div>
         <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#f59e0b;">Overweight</span><br>26–29.9</div>
@@ -3230,11 +3268,7 @@ async function buildJPGAndCapture(g,p,_K,_A,_WA,rcJ,rbgJ,rcS,rbgS,rcD,rbgD,activ
         <div style="text-align:center;flex:1;"><span style="font-weight:700;color:#7c3aed;">Obese II</span><br>≥35</div>
       </div>
     </div>
-    <div style="flex:1;background:#f8fafc;border-radius:9px;padding:9px 11px;">
-      <div style="font-size:9.5px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:3px;">INTERPRETASI RISIKO</div>
-      ${p.jakvas?`<div style="font-size:9px;color:#4b5563;line-height:1.4;margin-bottom:3px;">JAKVAS <strong style="color:${rcJ};">${g.risikoLabelJ} (${g.probJ})</strong> jantung koroner 10 tahun.</div>
-      <svg width="100%" height="95" viewBox="0 0 180 105"><path d="M18,92 A73,73 0 0,1 62,26" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"/><path d="M66,23 A73,73 0 0,1 115,23" stroke="#f59e0b" stroke-width="14" fill="none" stroke-linecap="round"/><path d="M119,26 A73,73 0 0,1 163,92" stroke="#ef4444" stroke-width="14" fill="none" stroke-linecap="round"/>${gaugeNeedle(g.risikoJ)}<text x="10" y="105" font-size="9" fill="#9ca3af">Rendah</text><text x="90" y="14" font-size="9" fill="#9ca3af" text-anchor="middle">Sedang</text><text x="165" y="105" font-size="9" fill="#9ca3af" text-anchor="end">Tinggi</text><text x="90" y="76" font-size="20" fill="${rcJ}" font-weight="bold" text-anchor="middle">${g.probJ}</text></svg>`:""}
-    </div>
+    ${gaugesHTML}
   </div>
 </div>
 ${p.jakvas?`<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
@@ -3242,6 +3276,16 @@ ${p.jakvas?`<div style="background:white;margin:8px 14px 0;border-radius:12px;pa
   <table width="100%" style="border-collapse:collapse;font-size:11px;">
     <thead><tr style="background:#f8fafc;"><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Parameter</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Keterangan</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Parameter</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Keterangan</th></tr></thead>
     <tbody>${tblRows(jData,jClr)}</tbody></table></div>`:""}
+${p.stroke?`<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+  <div style="font-size:10.5px;font-weight:800;color:${rcS};text-transform:uppercase;border-bottom:2px solid ${rcS}33;padding-bottom:3px;margin-bottom:7px;">🧠 RINCIAN STROKE — ${g.risikoLabelS.toUpperCase()} | ${g.totalS}/17</div>
+  <table width="100%" style="border-collapse:collapse;font-size:11px;">
+    <thead><tr style="background:#f8fafc;"><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Faktor</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Faktor</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th></tr></thead>
+    <tbody>${tblRows(sData,sClr)}</tbody></table></div>`:""}
+${p.findrisc?`<div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+  <div style="font-size:10.5px;font-weight:800;color:${rcD};text-transform:uppercase;border-bottom:2px solid ${rcD}33;padding-bottom:3px;margin-bottom:7px;">💉 RINCIAN FINDRISC — ${g.risikoLabelD.toUpperCase()} | ${g.pctD} | Skor: ${g.totalD}</div>
+  <table width="100%" style="border-collapse:collapse;font-size:11px;">
+    <thead><tr style="background:#f8fafc;"><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Faktor</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;border-left:2px solid #e5e7eb;">Faktor</th><th style="text-align:center;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Skor</th><th style="text-align:left;padding:4px 7px;color:#374151;font-weight:700;border-bottom:1px solid #e5e7eb;">Ket.</th></tr></thead>
+    <tbody>${tblRows(dData,dClr)}</tbody></table></div>`:""}
 <div style="background:white;margin:8px 14px 0;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
   <div style="font-size:10.5px;font-weight:800;color:#111827;text-transform:uppercase;border-bottom:2px solid #e5e7eb;padding-bottom:3px;margin-bottom:8px;">REKOMENDASI PERSONAL TERPADU (${rekomCards.length} REKOMENDASI)</div>
   <div style="display:flex;gap:9px;"><div style="flex:1;">${rekomLeft}</div><div style="flex:1;">${rekomRight}</div></div>
