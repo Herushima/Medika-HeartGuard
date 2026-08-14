@@ -1311,19 +1311,6 @@ body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif !important;}
     </div>
   </div>
 
-  <!-- ═══ TRIAS SOK ═══ -->
-  <div class="trias-card animate">
-    <div>
-      <div class="trias-title">Trias SOK</div>
-      <div class="trias-sub">Terbukti meningkatkan survival rate penduduk Jakarta</div>
-    </div>
-    <div class="trias-pills">
-      <div class="trias-pill">🚭 Stop Merokok</div>
-      <div class="trias-pill">🏃 Olahraga Teratur</div>
-      <div class="trias-pill">💪 Kerja Fisik Memadai</div>
-    </div>
-  </div>
-
   <!-- ═══ UNIFIED RECOMMENDATIONS ═══ -->
   <div class="section-title animate">Rekomendasi Personal Terpadu</div>
   <div class="rekom-unified-note animate" id="rekomNote">—</div>
@@ -1878,7 +1865,7 @@ function hitung() {
     isi:'Kurang gerak memengaruhi skor jantung dan diabetes Anda. Target 150 menit/minggu aktivitas moderat. Mulai dengan jalan cepat 30 menit/hari, 5 hari/minggu. Olahraga meningkatkan sensitivitas insulin dan menurunkan tekanan darah.'});
   // Kolesterol
   if (kolesterol==='ya') allRekoms.push({icon:'🧪',judul:'Kontrol Profil Lipid',urgent:risikoS!=='rendah',tag:'Stroke',
-    isi:'Dislipidemia meningkatkan risiko stroke (+1) dan aterosklerosis. Periksa LDL, HDL, trigliserida tiap 6 bulan. Pertimbangkan terapi statin atas rekomendasi dokter. LDL target <100 mg/dL untuk risiko sedang-tinggi.'});
+    isi:'Dislipidemia meningkatkan risiko stroke (+1) dan aterosklerosis. Periksa LDL, HDL, trigliserida tiap 6 bulan. Mulai terapi statin. Target LDL <70 mg/dL untuk risiko sedang-tinggi.'});
   // Penyakit jantung
   if (pj==='ya') allRekoms.push({icon:'🫀',judul:'Monitoring Kondisi Jantung Rutin',urgent:risikoS==='tinggi'||risikoS==='sangat-tinggi',tag:'Stroke',
     isi:'Riwayat penyakit jantung (+3 skor stroke) meningkatkan risiko trombus dan emboli serebral. Kontrol rutin ke dokter Sp. Jantung dan ikuti rekomendasi pengobatan secara konsisten.'});
